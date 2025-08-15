@@ -7,6 +7,10 @@ import java.awt.*;
 import java.util.ArrayList;
 
 public class GamePanel extends JPanel implements Runnable{
+    private boolean chess960Mode;
+    private boolean kingTakeEndsGame;
+
+
     public static final int WIDTH = 800;
     public static final int HEIGHT = 600;
     final int FPS = 60;
@@ -34,8 +38,8 @@ public class GamePanel extends JPanel implements Runnable{
     boolean gameOver;
     boolean stalemate;
 
-    public GamePanel() {
-
+    public GamePanel(boolean chess960mode) {
+        this.chess960Mode = chess960mode;
         setPreferredSize(new Dimension(WIDTH,HEIGHT));
         setBackground(Color.black);
         addMouseMotionListener(mouse);
@@ -55,7 +59,15 @@ public class GamePanel extends JPanel implements Runnable{
     }
 
     public void setPieces() {
+        pieces.clear();
+        if (chess960Mode) {
+            setChess960Pieces();
+        } else {
+            setNormalPieces();
+        }
+    }
 
+    public void setNormalPieces() {
         // WHITE TEAM
         pieces.add(new  Pawn(0, 6, WHITE));
         pieces.add(new  Pawn(1, 6, WHITE));
@@ -91,6 +103,72 @@ public class GamePanel extends JPanel implements Runnable{
         pieces.add(new Bishop(5, 0,BLACK));
         pieces.add(new Queen(3, 0,BLACK));
         pieces.add(new King(4, 0,BLACK));
+    }
+
+    public void setChess960Pieces(){
+        // randomly generated chess960 starting position
+        int[] backRank = {0, 0, 0, 0,
+                0, 0, 0, 0};
+        ArrayList<Integer> positions = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            positions.add(i);
+        }
+        // Place bishops on opposite color squares
+        int bishop1Pos = positions.remove((int)(Math.random() * 4) * 2);
+        int bishop2Pos = positions.remove((int)(Math.random() * 4) * 2 + 1);
+        backRank[bishop1Pos] = 3;
+        backRank[bishop2Pos] = 3;
+        // Place queen
+        int queenPos = positions.remove((int)(Math.random() * 6));
+        backRank[queenPos] = 4;
+        // Place knights
+        int knight1Pos = positions.remove((int)(Math.random() * 5));
+        int knight2Pos = positions.remove((int)(Math.random() * 4));
+        backRank[knight1Pos] = 2;
+        backRank[knight2Pos] = 2;
+        // Place rooks and king
+        int rook1Pos = positions.remove(0);
+        int kingPos = positions.remove(0);
+        int rook2Pos = positions.remove(0);
+        backRank[rook1Pos] = 1;
+        backRank[kingPos] = 5;
+        backRank[rook2Pos] = 1;
+        // WHITE TEAM
+        pieces.add(new  Pawn(0, 6, WHITE));
+        pieces.add(new  Pawn(1, 6, WHITE));
+        pieces.add(new  Pawn(2, 6, WHITE));
+        pieces.add(new  Pawn(3, 6, WHITE));
+        pieces.add(new  Pawn(4, 6, WHITE));
+        pieces.add(new  Pawn(5, 6, WHITE));
+        pieces.add(new  Pawn(6, 6, WHITE));
+        pieces.add(new  Pawn(7, 6, WHITE));
+        for (int i = 0; i < 8; i++) {
+            switch (backRank[i]) {
+                case 1 -> pieces.add(new Rook(i, 7, WHITE));
+                case 2 -> pieces.add(new Knight(i, 7, WHITE));
+                case 3 -> pieces.add(new Bishop(i, 7, WHITE));
+                case 4 -> pieces.add(new Queen(i, 7, WHITE));
+                case 5 -> pieces.add(new King(i, 7, WHITE));
+            }
+        }
+        // BLACK TEAM
+        pieces.add(new Pawn(0, 1,BLACK));
+        pieces.add(new Pawn(1, 1,BLACK));
+        pieces.add(new Pawn(2, 1,BLACK));
+        pieces.add(new Pawn(3, 1,BLACK));
+        pieces.add(new Pawn(4, 1,BLACK));
+        pieces.add(new Pawn(5, 1,BLACK));
+        pieces.add(new Pawn(6, 1,BLACK));
+        pieces.add(new Pawn(7, 1,BLACK));
+        for (int i = 0; i < 8; i++) {
+            switch (backRank[i]) {
+                case 1 -> pieces.add(new Rook(i, 0, BLACK));
+                case 2 -> pieces.add(new Knight(i, 0, BLACK));
+                case 3 -> pieces.add(new Bishop(i, 0, BLACK));
+                case 4 -> pieces.add(new Queen(i, 0, BLACK));
+                case 5 -> pieces.add(new King(i, 0, BLACK));
+            }
+        }
     }
 
     //Test
@@ -179,6 +257,18 @@ public class GamePanel extends JPanel implements Runnable{
                             castlingP.updatePosition();
                         }
 
+                        if (kingTakeEndsGame) {
+                            copyPieces(simPieces, pieces);
+                            activeP.updatePosition();
+                            if (castlingP != null) castlingP.updatePosition();
+                            gameOver = true;
+                            // Winner is the side that just moved
+                            checkingP = activeP; // optional for UI
+                            kingTakeEndsGame = false;
+                            return;
+                        }
+
+
                         if (isKingInCheck() && isCheckMate()){
                             gameOver = true;
                         }else if (isStalemate() && !isKingInCheck()){
@@ -230,6 +320,7 @@ public class GamePanel extends JPanel implements Runnable{
 
     private void simulate() {
 
+        if (activeP == null) return; // Added null check
         canMove = false;
         validSquare = false;
 
@@ -251,18 +342,22 @@ public class GamePanel extends JPanel implements Runnable{
         activeP.row = activeP.getRow(activeP.y);
 
         // Check if the piece is hovering over a reachable square
-        if (activeP.canMove(activeP.col, activeP.row)){
-
+        if (activeP.canMove(activeP.col, activeP.row)) {
             canMove = true;
 
-            // if hitting a piece, remove it from the list
-            if(activeP.hittingP != null){
+            if (activeP.hittingP != null) {
+                if (activeP.hittingP.type == Type.KING) {
+                    canMove = false;
+                    validSquare = false;
+                    return;
+                }
                 simPieces.remove(activeP.hittingP.getIndex());
             }
 
             checkCastling();
 
-            if (!isIllegal(activeP) || !opponentCanCaptureKing()){
+            // Only allow move if our king is safe after the simulation
+            if (!opponentCanCaptureKing()) {
                 validSquare = true;
             }
         }
@@ -354,7 +449,7 @@ public class GamePanel extends JPanel implements Runnable{
     }
 
     private void changePlayer(){
-
+        kingTakeEndsGame = false;
         if (currentColor == WHITE){
             currentColor = BLACK;
             //Reset black's two stepped status
@@ -403,16 +498,16 @@ public class GamePanel extends JPanel implements Runnable{
     }
 
     private boolean isKingInCheck() {
-
         Piece king = getKing(true);
-
-        if (activeP.canMove(king.col, king.row)){
+        if (king == null) { // Safety: should not happen now that king capture is blocked
+            checkingP = null;
+            return false;
+        }
+        if (activeP != null && activeP.canMove(king.col, king.row)) {
             checkingP = activeP;
             return true;
-        }else {
-            checkingP = null;
         }
-
+        checkingP = null;
         return false;
     }
 
@@ -531,7 +626,7 @@ public class GamePanel extends JPanel implements Runnable{
                     // The checking piece is above the king
                     if (checkingP.col < king.col) {
                         // The checking piece is in the upper left
-                        for (int col = checkingP.col, row = checkingP.row; col < king.col; col++, row++) {
+                        for (int col = checkingP.col, row = checkingP.row; col < king.col && row < king.row; col++, row++) {
                             for (Piece piece : simPieces) {
                                 if (piece != king && piece.color != currentColor &&
                                         piece.canMove(col, row)) {
@@ -623,7 +718,8 @@ public class GamePanel extends JPanel implements Runnable{
         }
 
         // Reset the temporary King position
-        king.resetPosition();
+        king.col -= colPlus; // Reset column
+        king.row -= rowPlus; // Reset row
         copyPieces(pieces, simPieces);
 
         return isValidMove;
@@ -632,8 +728,8 @@ public class GamePanel extends JPanel implements Runnable{
     private boolean isStalemate(){
         int count = 0;
         // Count the number of piece
-        for (Piece piece : simPieces){
-            if (piece.color != currentColor){
+        for (Piece piece : simPieces) {
+            if (piece.color == currentColor) {
                 count++;
             }
         }

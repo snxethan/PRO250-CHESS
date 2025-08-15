@@ -3,25 +3,29 @@ package main;
 import javax.swing.*;
 
 public class Main {
-
-//    static ImageIcon logo = new ImageIcon(Main.class.getClassLoader().
-//            getResource("res/chess.png"));
-
     public static void main(String[] args) {
-
         JFrame window = new JFrame("Chess Game");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         window.setResizable(false);
-//        window.getIconImage(logo.getImage());
 
-        //Add Main.Main.GamePanel to the window
-        GamePanel gp = new GamePanel();
-        window.add(gp);
+        // Start screen
+        StartScreen startScreen = new StartScreen(
+                e -> startGame(window, false),
+                e -> startGame(window, true)
+        );
+        window.add(startScreen);
         window.pack();
-
         window.setLocationRelativeTo(null);
         window.setVisible(true);
+    }
 
+    private static void startGame(JFrame window, boolean chess960) {
+        window.getContentPane().removeAll();
+        GamePanel gp = new GamePanel(chess960);
+        window.add(gp);
+        window.pack();
         gp.lauchGame();
+        window.revalidate();
+        window.repaint();
     }
 }
