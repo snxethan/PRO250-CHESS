@@ -5,6 +5,7 @@ import piece.*;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Collections;
 
 public class GamePanel extends JPanel implements Runnable{
     private boolean chess960Mode;
@@ -105,43 +106,51 @@ public class GamePanel extends JPanel implements Runnable{
         pieces.add(new King(4, 0,BLACK));
     }
 
-    public void setChess960Pieces(){
-        // randomly generated chess960 starting position
-        int[] backRank = {0, 0, 0, 0,
-                0, 0, 0, 0};
-        ArrayList<Integer> positions = new ArrayList<>();
-        for (int i = 0; i < 8; i++) {
-            positions.add(i);
-        }
-        // Place bishops on opposite color squares
-        int bishop1Pos = positions.remove((int)(Math.random() * 4) * 2);
-        int bishop2Pos = positions.remove((int)(Math.random() * 4) * 2 + 1);
+    public void setChess960Pieces() {
+        int[] backRank = new int[8];
+
+        ArrayList<Integer> remaining = new ArrayList<>();
+        for (int i = 0; i < 8; i++) remaining.add(i);
+
+        // Bishops on opposite colors
+        int[] evenSquares = {0, 2, 4, 6};
+        int[] oddSquares  = {1, 3, 5, 7};
+        int bishop1Pos = evenSquares[(int) (Math.random() * evenSquares.length)];
+        int bishop2Pos = oddSquares[(int) (Math.random() * oddSquares.length)];
         backRank[bishop1Pos] = 3;
         backRank[bishop2Pos] = 3;
-        // Place queen
-        int queenPos = positions.remove((int)(Math.random() * 6));
+        remaining.remove(Integer.valueOf(bishop1Pos));
+        remaining.remove(Integer.valueOf(bishop2Pos));
+
+        // Queen
+        int queenPos = remaining.remove((int) (Math.random() * remaining.size()));
         backRank[queenPos] = 4;
-        // Place knights
-        int knight1Pos = positions.remove((int)(Math.random() * 5));
-        int knight2Pos = positions.remove((int)(Math.random() * 4));
+
+        // Knights
+        int knight1Pos = remaining.remove((int) (Math.random() * remaining.size()));
+        int knight2Pos = remaining.remove((int) (Math.random() * remaining.size()));
         backRank[knight1Pos] = 2;
         backRank[knight2Pos] = 2;
-        // Place rooks and king
-        int rook1Pos = positions.remove(0);
-        int kingPos = positions.remove(0);
-        int rook2Pos = positions.remove(0);
+
+        // Remaining 3 squares -> rooks and king; king must be between rooks
+        Collections.sort(remaining);
+        int rook1Pos = remaining.get(0);
+        int kingPos  = remaining.get(1);
+        int rook2Pos = remaining.get(2);
         backRank[rook1Pos] = 1;
-        backRank[kingPos] = 5;
+        backRank[kingPos]  = 5;
         backRank[rook2Pos] = 1;
-        // WHITE TEAM
-        pieces.add(new  Pawn(0, 6, WHITE));
-        pieces.add(new  Pawn(1, 6, WHITE));
-        pieces.add(new  Pawn(2, 6, WHITE));
-        pieces.add(new  Pawn(3, 6, WHITE));
-        pieces.add(new  Pawn(4, 6, WHITE));
-        pieces.add(new  Pawn(5, 6, WHITE));
-        pieces.add(new  Pawn(6, 6, WHITE));
-        pieces.add(new  Pawn(7, 6, WHITE));
+
+        // WHITE pawns
+        pieces.add(new Pawn(0, 6, WHITE));
+        pieces.add(new Pawn(1, 6, WHITE));
+        pieces.add(new Pawn(2, 6, WHITE));
+        pieces.add(new Pawn(3, 6, WHITE));
+        pieces.add(new Pawn(4, 6, WHITE));
+        pieces.add(new Pawn(5, 6, WHITE));
+        pieces.add(new Pawn(6, 6, WHITE));
+        pieces.add(new Pawn(7, 6, WHITE));
+        // WHITE back rank
         for (int i = 0; i < 8; i++) {
             switch (backRank[i]) {
                 case 1 -> pieces.add(new Rook(i, 7, WHITE));
@@ -151,15 +160,17 @@ public class GamePanel extends JPanel implements Runnable{
                 case 5 -> pieces.add(new King(i, 7, WHITE));
             }
         }
-        // BLACK TEAM
-        pieces.add(new Pawn(0, 1,BLACK));
-        pieces.add(new Pawn(1, 1,BLACK));
-        pieces.add(new Pawn(2, 1,BLACK));
-        pieces.add(new Pawn(3, 1,BLACK));
-        pieces.add(new Pawn(4, 1,BLACK));
-        pieces.add(new Pawn(5, 1,BLACK));
-        pieces.add(new Pawn(6, 1,BLACK));
-        pieces.add(new Pawn(7, 1,BLACK));
+
+        // BLACK pawns
+        pieces.add(new Pawn(0, 1, BLACK));
+        pieces.add(new Pawn(1, 1, BLACK));
+        pieces.add(new Pawn(2, 1, BLACK));
+        pieces.add(new Pawn(3, 1, BLACK));
+        pieces.add(new Pawn(4, 1, BLACK));
+        pieces.add(new Pawn(5, 1, BLACK));
+        pieces.add(new Pawn(6, 1, BLACK));
+        pieces.add(new Pawn(7, 1, BLACK));
+        // BLACK back rank mirrors
         for (int i = 0; i < 8; i++) {
             switch (backRank[i]) {
                 case 1 -> pieces.add(new Rook(i, 0, BLACK));
