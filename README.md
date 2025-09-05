@@ -161,7 +161,6 @@ This project is part of the PRO250 course curriculum. Please check with the cour
 
 ---
 
-**Course**: PRO250  
-**Project**: Chess Game Implementation  
-**Language**: Java  
-**GUI Framework**: Swing
+## Author(s)
+
+- [**Ethan Townsend (snxethan)**](www.ethantownsend.dev)
